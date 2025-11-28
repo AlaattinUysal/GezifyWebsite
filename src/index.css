@@ -1,0 +1,79 @@
+/* 1. Tailwind'in temel katmanlarını içeri aktar (v3) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 2. Projenin genel stilleri (Animasyon, Galeri vb.) */
+body {
+    font-family: 'Inter', sans-serif;
+}
+.soft-slide-up {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes slide-up {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.rolling-gallery {
+    display: flex;
+    gap: 1.5rem; /* 24px */
+    padding-block: 1.5rem;
+    overflow-x: auto;
+    perspective: 1000px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.rolling-gallery::-webkit-scrollbar {
+    display: none;
+}
+.rolling-gallery-item {
+    flex: 0 0 360px; /* Kart genişliği */
+    transition: transform 0.5s ease;
+}
+.rolling-gallery-item:hover {
+    transform: rotateY(5deg) scale(1.05);
+}
+
+/* --- CodePen İnteraktif Harita Stilleri (GÜNCELLENDİ) --- */
+
+/* Tooltip (Bilgi Kutucuğu) Stili */
+.il-isimleri {
+  position: fixed; /* Fareyi tam takip etmesi için 'fixed' daha iyi */
+  z-index: 999; /* En üstte görünmesi için */
+  pointer-events: none; /* Farenin tooltip'i algılamasını engeller */
+}
+.il-isimleri div {
+  font-family: 'Open Sans', sans-serif;
+  display: inline-block;
+  background: #222;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px; /* Tailwind 'rounded' */
+}
+
+/* Varsayılan il stili (CodePen'deki gibi açık gri) */
+#svg-turkey-map path {
+  fill: #cccccc; 
+  stroke: #fff;
+  stroke-width: 0.5;
+  transition: fill 0.1s ease-in-out; /* Geçişi hızlandırdık */
+  cursor: pointer;
+}
+
+/* DÜZELTME: CSS :hover kuralını SİLDİK. 
+  Çünkü React state'i ile kontrol edeceğiz.
+*/
+
+/* JavaScript'ten gelen 'hovered' sınıfı (GSB Mavi) */
+#svg-turkey-map path.hovered {
+  fill: #3B82F6; /* Tailwind blue-500 (Mavi) */
+}
+
+/* JavaScript'ten gelen 'selected' sınıfı (GSB Siyah) */
+#svg-turkey-map path.selected {
+  fill: #111827; /* Tailwind gray-900 (Siyah) */
+}
