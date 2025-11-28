@@ -24,87 +24,105 @@ const PopularDestinations = () => {
       title: 'Kapadokya',
       image: "https://wp.oggusto.com/wp-content/uploads/2025/04/kapadokya-gun-dogumu-sicak-hava-balonlari-peribacalari.webp"
     },
-    // Kaydırma efektini test etmek için verileri çoğaltıyoruz
+    // 2. Sayfa (Tam 4 kartlık yeni set)
     {
       id: 5,
-      title: 'Pamukkale (2)',
-      image: "https://www.pamukkale.com.tr/images/sehirler/denizli.jpg"
+      title: 'Mardin',
+      image: "https://artuklu.bel.tr/tema/genel/uploads/sayfalar/buyuk-mardin-otelinden.jpg"
     },
     {
       id: 6,
-      title: 'İstanbul (2)',
-      image: 'https://media.cntravellerme.com/photos/6867aeba85cc078a3f1e5ad3/1:1/w_2160,h_2160,c_limit/1480863367'
+      title: 'İzmir',
+      image: "https://cdn.britannica.com/34/10734-050-29C0B3FE/Clock-tower-Izmir-Turkey.jpg"
+    },
+    {
+      id: 7,
+      title: 'Rize',
+      image: "https://vagonatinyhouse.com/wp-content/uploads/2021/07/rize_rize-firtina-vadisi-8d5447-1170x650.jpg"
+    },
+    {
+      id: 8,
+      title: 'Fethiye',
+      image: "https://dunyakentimugla.org/wp-content/uploads/2019/11/FETHIYE.webp"
     }
   ];
 
-  // Kaydırma Fonksiyonu
+  // Kaydırma Fonksiyonu - Tam bir görünüm genişliği kadar kaydırır
   const scroll = (direction) => {
     const { current } = scrollRef;
     if (current) {
-      const scrollAmount = direction === 'left' ? -400 : 400;
+      // Konteynerin genişliğini al (paddingler hariç)
+      const containerWidth = current.clientWidth;
+      const scrollAmount = direction === 'left' ? -containerWidth : containerWidth;
+      
       current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
   return (
-    <div className="w-full space-y-16 mt-16 px-4 md:px-12"> {/* <-- KENAR BOŞLUKLARI BURADA (px-4 md:px-12) */}
+    <div className="w-full space-y-16 mt-16 px-4 md:px-12"> {/* Kenar Boşlukları Burada */}
       
-      {/* --- SLIDER BÖLÜMÜ --- */}
+      {/* --- SLIDER --- */}
       <section className="soft-slide-up stagger-3 relative group/slider">
-        <div className="flex items-center justify-between mb-6">
+        
+        {/* Başlık ve Oklar */}
+        <div className="flex items-center justify-between mb-6 px-2">
              <h2 className="text-3xl font-bold tracking-tight text-text-light dark:text-text-dark">POPÜLER DESTİNASYONLAR</h2>
              
-             {/* Mobil için Oklar (Başlık Yanında) */}
-             <div className="flex gap-2 md:hidden">
-                <button onClick={() => scroll('left')} className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"><span className="material-symbols-outlined">chevron_left</span></button>
-                <button onClick={() => scroll('right')} className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"><span className="material-symbols-outlined">chevron_right</span></button>
+             {/* Oklar Başlığın Yanında */}
+             <div className="flex gap-3">
+                <button 
+                  onClick={() => scroll('left')}
+                  className="w-12 h-12 rounded-full border border-gray-300 dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-all shadow-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-primary">chevron_left</span>
+                </button>
+                <button 
+                  onClick={() => scroll('right')}
+                  className="w-12 h-12 rounded-full border border-gray-300 dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-all shadow-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-primary">chevron_right</span>
+                </button>
              </div>
         </div>
-
-        {/* MASAÜSTÜ İÇİN SOL OK (Resimlerin Üzerinde) */}
-        <button 
-          onClick={() => scroll('left')}
-          className="hidden md:flex absolute left-0 top-[60%] -translate-y-1/2 z-20 -ml-6 w-12 h-12 bg-white dark:bg-card-dark text-primary rounded-full shadow-xl items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 hover:scale-110 border border-gray-100 cursor-pointer"
-        >
-          <span className="material-symbols-outlined">chevron_left</span>
-        </button>
-
+        
         {/* Kaydırılabilir Alan */}
         <div 
           ref={scrollRef}
-          className="flex gap-6 overflow-x-auto pb-8 scroll-smooth no-scrollbar"
+          className="flex gap-6 overflow-x-auto pb-8 scroll-smooth no-scrollbar snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {destinations.map((dest, index) => (
             <div 
               key={`${dest.id}-${index}`} 
-              // Kart Boyutları: Mobilde %85, Masaüstünde yaklaşık 400px
-              className="relative flex-shrink-0 w-[85vw] sm:w-[400px] h-[500px] rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 cursor-pointer group"
+              // Matematiksel Hesap:
+              // w-full: Mobilde 1 tane
+              // sm:w-[calc(50%-12px)]: Tablette 2 tane (gap-6=24px, yarısı 12px)
+              // lg:w-[calc(25%-18px)]: Masaüstünde 4 tane (gap-6=24px, 3 boşluk toplam 72px, 4'e böl 18px)
+              className="relative flex-none w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] h-[500px] rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:shadow-2xl cursor-pointer group snap-start"
             >
+              {/* Resim */}
               <img 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                 src={dest.image} 
                 alt={dest.title}
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
+              {/* Karartma */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+              
+              {/* Yazılar */}
               <div className="absolute bottom-0 left-0 p-8 w-full">
-                <h3 className="text-white text-4xl font-bold drop-shadow-lg mb-2">{dest.title}</h3>
-                <p className="text-white/90 text-sm uppercase tracking-widest font-medium flex items-center gap-2 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
-                  KEŞFET <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </p>
+                <h3 className="text-white text-4xl font-bold drop-shadow-lg mb-2 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">{dest.title}</h3>
+                <div className="h-0 overflow-hidden group-hover:h-auto transition-all duration-300 opacity-0 group-hover:opacity-100">
+                   <p className="text-white/90 text-sm uppercase tracking-widest font-medium flex items-center gap-2 mt-2">
+                     KEŞFET <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                   </p>
+                </div>
               </div>
             </div>
           ))}
         </div>
-
-        {/* MASAÜSTÜ İÇİN SAĞ OK (Resimlerin Üzerinde) */}
-        <button 
-          onClick={() => scroll('right')}
-          className="hidden md:flex absolute right-0 top-[60%] -translate-y-1/2 z-20 -mr-6 w-12 h-12 bg-white dark:bg-card-dark text-primary rounded-full shadow-xl items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 hover:scale-110 border border-gray-100 cursor-pointer"
-        >
-          <span className="material-symbols-outlined">chevron_right</span>
-        </button>
       </section>
 
       {/* --- HIZLI EYLEMLER (BUTONLAR) --- */}

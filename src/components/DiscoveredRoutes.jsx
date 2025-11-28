@@ -1,173 +1,171 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 
-function DiscoveredRoutes() {
-  const galleryRef = useRef(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  
-  // Kaydırma miktarı (360px kart + 24px boşluk)
-  const scrollAmount = 384; 
+const DiscoveredRoutes = () => {
+  const scrollRef = useRef(null);
 
-  const scrollRight = () => {
-    if (galleryRef.current) {
-      galleryRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-      if (!showLeftArrow) {
-        setShowLeftArrow(true);
-      }
+  // TAM İSABET RESİMLERLE GÜNCELLENMİŞ ROTA VERİLERİ
+  const routes = [
+    {
+      id: 1,
+      title: 'İstanbul 3 Günlük',
+      rating: '4.9',
+      count: '12K',
+      // Galata Kulesi ve Boğaz
+      image: 'https://cdnp.flypgs.com/files/ulkeler/Turkiye/TR/tarihi-istanbul-turu.jpg'
+    },
+    {
+      id: 2,
+      title: 'Ege Kıyıları',
+      rating: '4.8',
+      count: '8K',
+      // Bodrum / Ege denizi ve beyaz evler
+      image: "https://image.elitema.com.tr/db_images/45/4/981/oludeniz.jpg"
+    },
+    {
+      id: 3,
+      title: 'Kapadokya Macera',
+      rating: '4.9',
+      count: '15K',
+      // Balonlar ve Peribacaları
+      image: 'https://images.unsplash.com/photo-1641128324972-af3212f0f6bd?q=80&w=400&auto=format&fit=crop'
+    },
+    {
+      id: 4,
+      title: 'Likya Yolu',
+      rating: '4.9',
+      count: '7K',
+      // Likya yolu manzarası
+      image: "https://perdue.com.tr/wp-content/uploads/2021/05/likya-yolu-4.jpg"
+    },
+    {
+      id: 5,
+      title: 'Karadeniz Yaylaları',
+      rating: '4.7',
+      count: '5K',
+      // Yeşil Yayla, Sis ve Dağ Evi (Ayder/Rize)
+      image: 'https://karadenizturlari.com.tr/uploads/2025/06/karadeniz-yayla-turlari.jpg'
+    },
+    // --- 2. Grup (Sağ oka basınca gelecekler) ---
+    {
+      id: 6,
+      title: 'Mardin Kültür Turu',
+      rating: '4.8',
+      count: '6K',
+      // Mardin Taş Evleri ve Mezopotamya Ovası
+      image: 'https://www.mardingezirehberim.com/wp-content/webp-express/webp-images/uploads/2025/09/Mardin-Turu-6-600x700.jpeg.webp'
+    },
+    {
+      id: 7,
+      title: 'Van Gölü Ekspresi',
+      rating: '4.6',
+      count: '4K',
+      // Van Gölü ve Akdamar Kilisesi
+      image: 'https://www.bizcetatil.com/images/tour/972_b.jpg'
+    },
+    {
+      id: 8,
+      title: 'Antalya Şelaleler',
+      rating: '4.9',
+      count: '11K',
+      // Düden/Kurşunlu Şelalesi benzeri
+      image: 'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?q=80&w=400&auto=format&fit=crop'
+    },
+    {
+      id: 9,
+      title: 'İzmir Köyleri',
+      rating: '4.7',
+      count: '9K',
+      // Alaçatı/Şirince tarzı taş sokaklar
+      image: 'https://www.gruppal.com/blog/public/assets/img/90eb1e0cb554586d1e46441f2d30e82a.jpg'
+    },
+    {
+      id: 10,
+      title: 'Gaziantep Lezzet',
+      rating: '5.0',
+      count: '18K',
+      // Baklava ve Fıstık
+      image: 'https://gezikesifleri.com/wp-content/uploads/2025/09/gaziantep-lezzet-turu-nasil-yapilir-adim-adim-gurme-rehberi-1-780x470.jpg'
     }
-  };
+  ];
 
-  const scrollLeft = () => {
-    if (galleryRef.current) {
-      galleryRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+  const scroll = (direction) => {
+    const { current } = scrollRef;
+    if (current) {
+      const scrollAmount = current.clientWidth;
+      current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
     }
   };
 
   return (
-    // 1. Ana Kapsayıcı
-    <section className="soft-slide-up stagger-1 py-16 md:py-24 space-y-4">
+    <div className="w-full space-y-8 mt-16 px-4 md:px-12">
       
-      {/* 2. Başlık Konteyneri */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <h2 className="text-3xl font-bold tracking-tight">✨ KEŞFEDİLEN ROTALAR</h2>
-      </div>
-
-      {/* 3. Galeri ve Yön Tuşları Konteyneri */}
-      <div className="relative w-full">
+      <section className="relative group/slider">
         
-        {/* Sol Ok */}
-        {showLeftArrow && (
-          <button
-            onClick={scrollLeft}
-            className="absolute z-10 top-1/2 -translate-y-1/2 left-6 lg:left-8 w-12 h-12 rounded-full bg-card-light dark:bg-card-dark shadow-lg flex items-center justify-center transition-opacity duration-300 opacity-80 hover:opacity-100 pointer-events-auto"
-            aria-label="Sola Kaydır"
-          >
-            <span className="material-symbols-outlined text-text-light dark:text-text-dark">chevron_left</span>
-          </button>
-        )}
-
-        {/* Sağ Ok */}
-        <button
-          onClick={scrollRight}
-          className="absolute z-10 top-1/2 -translate-y-1/2 right-6 lg:right-8 w-12 h-12 rounded-full bg-card-light dark:bg-card-dark shadow-lg flex items-center justify-center transition-opacity duration-300 opacity-80 hover:opacity-100 pointer-events-auto"
-          aria-label="Sağa Kaydır"
-        >
-          <span className="material-symbols-outlined text-text-light dark:text-text-dark">chevron_right</span>
-        </button>
-        
-        {/* 4. Galeri */}
-        <div 
-          ref={galleryRef} 
-          className="rolling-gallery overflow-x-hidden pl-6 lg:pl-8 pr-6 lg:pr-8"
-          style={{ scrollBehavior: 'smooth' }} 
-        >
-          
-          {/* Rota Kartı 1 */}
-          <div className="rolling-gallery-item flex h-full flex-1 flex-col gap-4 text-center rounded-xl bg-card-light dark:bg-card-dark shadow-lg p-4">
-            <div 
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full flex flex-col self-center w-4/5" 
-              style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDDeG0bWp1Z62PtBxJ3LoSIPRWe9ckvYQpBpoHRNmJTD8nqG-1IDV39W6YjUGthQIxj0C3QEEj5p4ebvTnx3D8kQzD1nV2bbM5esxmLTS9SxgYW9c6O6R97NbDAnEz5o25kRoC13zX5lEbqRfLzo7ydxioogziaEbPsZffdj_Kl5xO3mbUSxzKRXklRSss2_4HtlaG5O1AulRtw42_5lJ3Vo9dIobFnUQZjJ3Vn93cwBHB9jqDF7_vxFmLa78KjuomckovELg8ExiYS")' }}
-            ></div>
-            <div className="flex flex-col flex-1 justify-between pt-0 gap-3 text-center">
-              <div>
-                <p className="text-lg font-bold">İstanbul 3 Günlük</p>
-                <p className="text-sm text-accent font-bold">⭐ 4.9 <span className="text-gray-400 font-normal">(12K)</span></p>
-              </div>
-              <div className="flex flex-col gap-2 mt-2">
-                <button className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors">ROTA DETAY</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Rota Kartı 2 */}
-          <div className="rolling-gallery-item flex h-full flex-1 flex-col gap-4 text-center rounded-xl bg-card-light dark:bg-card-dark shadow-lg p-4">
-            <div 
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full flex flex-col self-center w-4/5" 
-              style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAuCDtHOo--fLcPJ9XhpznKFz-HBrK9zVQ9GklLH5AG2D7YeEU6vm3-OwFYKEfKJIulrEPvwAQMvH9b0B_Jb4m_pUcLIRRElqZTWBYnVUPTXLaeGQFM6dgh1XehLgUeI37x4mzHor_QgcREY1DN9QLvPqMuFLp6MNCga-_va-QlSybTwYuFcrmM4x2jG9ouKMpKvrJ8exf-gvjpP9lfDWrr7ai1u3rXvjDixjR2TcYk8e6aNd8ozi2da35gsh-OrT3TKG1l7zGgAONO")' }}
-            ></div>
-            <div className="flex flex-col flex-1 justify-between pt-0 gap-3 text-center">
-              <div>
-                <p className="text-lg font-bold">Ege Kıyıları</p>
-                <p className="text-sm text-accent font-bold">⭐ 4.8 <span className="text-gray-400 font-normal">(8K)</span></p>
-              </div>
-              <div className="flex flex-col gap-2 mt-2">
-                <button className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors">ROTA DETAY</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Rota Kartı 3 */}
-          <div className="rolling-gallery-item flex h-full flex-1 flex-col gap-4 text-center rounded-xl bg-card-light dark:bg-card-dark shadow-lg p-4">
-            <div 
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full flex flex-col self-center w-4/5" 
-              style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuArGBJauTWJ1PxvKFgAl2iI-_tJy6vTn7Xzs2n3iNqcbrTlI7NPV8MoPtGWo1-GlBN-qMD9Vd0rIWo3kggqR9Z6Own4p19cJ8Db8ySn4yBGikg5KtwN3MDRpmsTGao2vxdqB5j7tPEtdGYqL59AQ7j3twTBjuAjAs8A9TVyvWn-MS5f2TG85m7waytLYiOFjvpeB6lhqrU4u9SkxpZn9QfdFx0AkCRaWDmqfh1JgUuJLxH46YRFPLw1Wg8MH5FowIolPHEcTEXi9RAR")' }}
-            ></div>
-            <div className="flex flex-col flex-1 justify-between pt-0 gap-3 text-center">
-              <div>
-                <p className="text-lg font-bold">Kapadokya Macera</p>
-                <p className="text-sm text-accent font-bold">⭐ 4.9 <span className="text-gray-400 font-normal">(15K)</span></p>
-              </div>
-              <div className="flex flex-col gap-2 mt-2">
-                <button className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors">ROTA DETAY</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Rota Kartı 4 */}
-          <div className="rolling-gallery-item flex h-full flex-1 flex-col gap-4 text-center rounded-xl bg-card-light dark:bg-card-dark shadow-lg p-4">
-            <div 
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full flex flex-col self-center w-4/5" 
-              style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCH-53XcZqxZHg6xZQfEg-qWjXeDohSmBdQgUMxlHYCwn7PugUYCUj9vkkSUZY3ZzG_7vWunIuEOhLQb6ySHlW3hE9PGvdFBgA7a2Zh8Jhr90ZGFNkCyfsK9Oma1KDfQDgPD-PSRD-f-IF-3kzndn66i8l04ljmUc7mbLCoFvzSFsUdrkJCHmxqnAT1aoth3j9biWqKyVCimFpb2cxb7XcP1Q877d18Ob9oMMqBGS5HbFSv6IyuV7OVjPFZlRWPz-j13Y26Xh0QYuu6")' }}
-            ></div>
-            <div className="flex flex-col flex-1 justify-between pt-0 gap-3 text-center">
-              <div>
-                <p className="text-lg font-bold">Likya Yolu</p>
-                <p className="text-sm text-accent font-bold">⭐ 4.9 <span className="text-gray-400 font-normal">(7K)</span></p>
-              </div>
-              <div className="flex flex-col gap-2 mt-2">
-                <button className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors">ROTA DETAY</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Rota Kartı 5 */}
-          <div className="rolling-gallery-item flex h-full flex-1 flex-col gap-4 text-center rounded-xl bg-card-light dark:bg-card-dark shadow-lg p-4">
-            <div 
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full flex flex-col self-center w-4/5" 
-              style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBfTv9aYEJpgKhTIE_Ay-gyCCtvVCQaHeVvmIkfp839X4vQWKt6TiRbQAt-Vclu60aeBqAub-yhz9DK2uySoJ6lzR01CFMCKhf7d5sP9SicfmUsjA37nlkacLh59uqfl9L9Aq8bDEaDcb-hV6XPFEok8E_ONND3jPUccWmCRC033hBrTJLlKZas727ybjS3XJqA9lMll5_m8C1KYQhhjfnF4Qzj8fK2Mgh8PZgjDp6Z316s37BVrDAQ-muDexbGUBhnRpxaDIwTySd0")' }}
-            ></div>
-            <div className="flex flex-col flex-1 justify-between pt-0 gap-3 text-center">
-              <div>
-                <p className="text-lg font-bold">Karadeniz Yaylaları</p>
-                <p className="text-sm text-accent font-bold">⭐ 4.7 <span className="text-gray-400 font-normal">(5K)</span></p>
-              </div>
-              <div className="flex flex-col gap-2 mt-2">
-                <button className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors">ROTA DETAY</button>
-              </div>
-            </div>
-          </div>
-          
-          {/* YENİ EKLENEN KART (6. KART) */}
-          <div className="rolling-gallery-item flex h-full flex-1 flex-col gap-4 text-center rounded-xl bg-card-light dark:bg-card-dark shadow-lg p-4">
-            <div 
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full flex flex-col self-center w-4/5" 
-              // Test için farklı bir resim (Pamukkale) kullandım
-              style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuByR2yxh-P_pCSwVihDlCUW5yxvph8rhkGOsXHYriNoOGU4RIqn9V15Vu0CbZjdXIo0DbDsxWbweQDqpcENqFyRv5zPqa2WvD5NGHkWtpoP_ns6rtNRQ18lD_K4WkBVbTdmJZ-RuHzKXF5unEOGkH29zwwmfcJO5R0CgqxXLocDLTwyC2HFXl7HfjOH-r8PE6zp-ZZnDNgR3k16cnprXt_IbDmHbjsq2q_nbO8aaBGz5Bv0qZD3ktVhbuXiYXx9sfjU2JM1v0yFbWtj")' }}
-            ></div>
-            <div className="flex flex-col flex-1 justify-between pt-0 gap-3 text-center">
-              <div>
-                <p className="text-lg font-bold">Yeni Test Rotası</p>
-                <p className="text-sm text-accent font-bold">⭐ 5.0 <span className="text-gray-400 font-normal">(1)</span></p>
-              </div>
-              <div className="flex flex-col gap-2 mt-2">
-                <button className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors">ROTA DETAY</button>
-              </div>
-            </div>
-          </div>
-
+        <div className="flex items-center justify-between mb-6 px-1">
+           <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-accent text-3xl animate-pulse">auto_awesome</span>
+              <h2 className="text-3xl font-bold tracking-tight text-text-light dark:text-text-dark uppercase">KEŞFEDİLEN ROTALAR</h2>
+           </div>
+           
+           <div className="flex gap-2 md:hidden">
+              <button onClick={() => scroll('left')} className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><span className="material-symbols-outlined">chevron_left</span></button>
+              <button onClick={() => scroll('right')} className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><span className="material-symbols-outlined">chevron_right</span></button>
+           </div>
         </div>
-      </div>
-    </section>
+
+        {/* MASAÜSTÜ SOL OK */}
+        <button 
+          onClick={() => scroll('left')}
+          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 -ml-5 w-12 h-12 bg-white dark:bg-card-dark text-primary rounded-full shadow-xl items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 hover:scale-110 border border-gray-100 dark:border-gray-700 cursor-pointer"
+        >
+          <span className="material-symbols-outlined">chevron_left</span>
+        </button>
+
+        <div 
+          ref={scrollRef}
+          className="flex gap-6 overflow-x-auto pb-8 scroll-smooth no-scrollbar snap-x snap-mandatory"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {routes.map((route) => (
+            <div 
+              key={route.id} 
+              // --- 5'Lİ KART YAPISI ---
+              className="relative flex-shrink-0 w-[85vw] md:w-[calc(33.333%-16px)] lg:w-[calc(20%-19.2px)] bg-card-light dark:bg-card-dark rounded-2xl shadow-lg p-4 border border-gray-100 dark:border-gray-800 hover:shadow-xl transition-all duration-300 flex flex-col gap-4 snap-start group cursor-pointer"
+            >
+              <div 
+                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-4/5 mx-auto shadow-md transition-transform duration-500 group-hover:scale-105 border-4 border-white dark:border-gray-700"
+                style={{ backgroundImage: `url("${route.image}")` }}
+              ></div>
+
+              <div className="text-center flex-1 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark truncate">{route.title}</h3>
+                  <p className="text-sm text-accent font-bold flex items-center justify-center gap-1 mt-1">
+                    <span className="material-symbols-outlined text-sm">star</span> 
+                    {route.rating} 
+                    <span className="text-gray-400 font-normal text-xs">({route.count})</span>
+                  </p>
+                </div>
+                
+                <button className="w-full mt-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary hover:text-white transition-all duration-300">
+                  ROTA DETAY
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* MASAÜSTÜ SAĞ OK */}
+        <button 
+          onClick={() => scroll('right')}
+          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 -mr-5 w-12 h-12 bg-white dark:bg-card-dark text-primary rounded-full shadow-xl items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 hover:scale-110 border border-gray-100 dark:border-gray-700 cursor-pointer"
+        >
+          <span className="material-symbols-outlined">chevron_right</span>
+        </button>
+
+      </section>
+    </div>
   );
-}
+};
 
 export default DiscoveredRoutes;
