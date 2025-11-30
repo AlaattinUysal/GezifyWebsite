@@ -1,23 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import InteractiveTurkeyMap from './InteractiveTurkeyMap.jsx';
 
 function MapSection() {
   
   // State: Üzerine gelinen ve Seçilen ilin adları
   const [hoveredCityName, setHoveredCityName] = useState(null);
-  const [selectedCityName, setSelectedCityName] = useState(null); // Seçili şehri tutmak için
+  const [selectedCityName, setSelectedCityName] = useState(null);
   
   // Tooltip pozisyonu ve görünürlüğü
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0, visible: false });
   
-  // Tooltip Ref
-  const tooltipRef = useRef(null);
-
   // --- HOVER (Üzerine Gelme) İşlemleri ---
   const handleCityHover = (cityName, event) => {
     setHoveredCityName(cityName);
     if (event) {
-      // Tooltip'i farenin biraz sağına ve altına koy
       setTooltipPos({ x: event.clientX + 20, y: event.clientY + 20, visible: true });
     }
   };
@@ -35,7 +31,6 @@ function MapSection() {
 
   // --- CLICK (Tıklama) İşlemleri ---
   const handleCityClick = (cityName) => {
-    // Eğer zaten seçili şehre tıklandıysa seçimi kaldır, yoksa yeni şehri seç
     if (selectedCityName === cityName) {
       setSelectedCityName(null);
     } else {
@@ -46,39 +41,42 @@ function MapSection() {
 
   return (
     <section 
-      className="soft-slide-up stagger-2 py-16 md:py-24"
-      onMouseMove={handleMouseMove} // Fare hareketini takip et
+      className="soft-slide-up stagger-2 py-16 md:py-24 w-full"
+      onMouseMove={handleMouseMove} 
     >
       
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-4">
-        <h2 className="text-3xl font-bold tracking-tight">Türkiye'yi Haritada Keşfet</h2>
-      </div>
+      {/* DİKKAT: Başlığı buradan kaldırdım ve aşağıya, 
+         haritanın olduğu kutunun içine taşıdım.
+      */}
 
       <div className="px-6 lg:px-8 flex flex-col md:flex-row gap-8 items-start">
         
-        <div className="flex-grow w-full relative"> {/* Relative: Tooltip için önemli olabilir */}
+        {/* SOL TARA (Harita Alanı) */}
+        <div className="flex-grow w-full relative"> 
           
-          {/* DÜZELTME BURADA: State'leri (hovered ve selected) çocuğa gönderiyoruz! */}
+          {/* --- BAŞLIK BURAYA TAŞINDI --- */}
+          {/* Artık sadece haritanın genişliğine göre ortalanacak */}
+          <div className="w-full text-center mb-6">
+            <h2 className="text-3xl font-bold tracking-tight">Türkiye'yi Haritada Keşfet</h2>
+          </div>
+          {/* ----------------------------- */}
+          
           <InteractiveTurkeyMap 
             onCityHover={handleCityHover}
             onCityLeave={handleCityLeave}
             onCityClick={handleCityClick}
-            hoveredCityName={hoveredCityName}   // <-- BU EKSİKTİ
-            selectedCityName={selectedCityName} // <-- BU EKSİKTİ
+            hoveredCityName={hoveredCityName}   
+            selectedCityName={selectedCityName} 
           />
 
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Harita interaktif bir temsildir. Detaylar için şehirlere tıklayın.
-          </p>
-
-          {/* TOOLTIP (Sadece visible true ise ve bir isim varsa göster) */}
+          {/* TOOLTIP */}
           {tooltipPos.visible && hoveredCityName && (
             <div 
               className="il-isimleri" 
               style={{ 
                 top: tooltipPos.y, 
                 left: tooltipPos.x,
-                position: 'fixed' // Sayfa kaydırılsa bile fareyi takip etsin
+                position: 'fixed' 
               }}
             >
               <div>{hoveredCityName}</div>
@@ -86,8 +84,10 @@ function MapSection() {
           )}
         </div>
         
-        {/* Sağ Taraf (Kenar Çubuğu) */}
-        <div className="w-full md:w-80 lg:w-96 flex-shrink-0 bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg">
+        {/* SAĞ TARAF (Kenar Çubuğu) */}
+        <div className="w-full md:w-80 lg:w-96 flex-shrink-0 bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg mt-14"> 
+        {/* mt-14 ekledim ki başlık hizasına denk gelmesin, menü biraz aşağı insin */}
+          
           <h3 className="font-bold text-xl mb-4">Şehir Ara</h3>
           <input 
             className="form-input w-full rounded-lg border-gray-300 dark:border-gray-600 bg-background-light dark:bg-background-dark focus:border-primary focus:ring-primary" 
@@ -95,7 +95,6 @@ function MapSection() {
             type="text"
           />
           
-          {/* Seçili Şehri Gösteren Alan (Test Amaçlı) */}
           {selectedCityName && (
              <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <p className="text-primary font-bold">Seçili Rota: {selectedCityName}</p>
