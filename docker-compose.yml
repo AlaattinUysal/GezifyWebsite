@@ -1,0 +1,19 @@
+services:
+  valhalla:
+    # Doğru ve güncel imaj adresi
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    container_name: valhalla_turkiye
+    ports:
+      - "8002:8002"
+    volumes:
+      # Veriler artık D sürücüsündeki proje klasöründe saklanacak
+      - ./valhalla_data:/custom_files
+    environment:
+      # Türkiye harita verisi
+      - tile_urls=https://download.geofabrik.de/europe/turkey-latest.osm.pbf
+      # Disk ve RAM tasarrufu için kritik ayarlar
+      - build_elevation=False
+      - build_admins=False
+      - build_time_zones=True
+      # Bellek hatalarını önlemek için Valhalla'ya yardımcı ek ayar (isteğe bağlı ama önerilir)
+      - force_rebuild=True
