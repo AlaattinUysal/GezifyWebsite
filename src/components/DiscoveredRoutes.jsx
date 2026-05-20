@@ -76,7 +76,7 @@ const DiscoveredRoutes = () => {
       rating: '4.7',
       count: '9K',
       // Alaçatı/Şirince tarzı taş sokaklar
-      image: 'https://www.gruppal.com/blog/public/assets/img/90eb1e0cb554586d1e46441f2d30e82a.jpg'
+      image: 'https://cdnp.flypgs.com/files/sehirler/alacati-gezi-rehberi.jpg'
     },
     {
       id: 10,
@@ -84,7 +84,7 @@ const DiscoveredRoutes = () => {
       rating: '5.0',
       count: '18K',
       // Baklava ve Fıstık
-      image: 'https://gezikesifleri.com/wp-content/uploads/2025/09/gaziantep-lezzet-turu-nasil-yapilir-adim-adim-gurme-rehberi-1-780x470.jpg'
+      image: 'https://images.unsplash.com/photo-1561651823-34feb02250e4?q=80&w=400&auto=format&fit=crop'
     }
   ];
 

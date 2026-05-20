@@ -1,13 +1,25 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-// EKSİK OLAN KISIM BURASIYDI:
-// Bu satır, Tailwind'in çalışması için zorunludur.
-import './index.css' 
+node_modules
+dist
+dist-ssr
+*.local
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.env

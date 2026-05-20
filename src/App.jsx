@@ -5,7 +5,9 @@ import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import BlogPage from './pages/BlogPage';
 import RoutesPage from './pages/RoutesPage';
-import CreateRoutePage from './pages/CreateRoutePage'; // 1. YENİ IMPORT
+import CreateRoutePage from './pages/CreateRoutePage';
+import ProfilePage from './pages/ProfilePage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 
 function App() {
   return (
@@ -21,6 +23,12 @@ function App() {
 
       {/* 2. YENİ ROTA: "/yeni-rota" adresi CreateRoutePage'i açar */}
       <Route path="/yeni-rota" element={<CreateRoutePage />} />
+
+      {/* Profil / Login / Register sayfası rotası */}
+      <Route path="/profil" element={<ProfilePage />} />
+
+      {/* OAuth Callback rotası */}
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
     </Routes>
   );
 }

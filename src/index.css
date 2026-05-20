@@ -5,62 +5,84 @@
 
 /* 2. Projenin genel stilleri (Animasyon, Galeri vb.) */
 body {
-    font-family: 'Inter', sans-serif;
+  font-family: 'Inter', sans-serif;
+  -webkit-user-select: none; /* Safari */
+  user-select: none; /* Standard */
 }
+
+/* Girdi alanlarında metin seçimine/imlece izin ver */
+input, textarea, select, [contenteditable="true"] {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
 .soft-slide-up {
-    opacity: 0;
-    transform: translateY(20px);
-    animation: slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
 @keyframes slide-up {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .rolling-gallery {
-    display: flex;
-    gap: 1.5rem; /* 24px */
-    padding-block: 1.5rem;
-    overflow-x: auto;
-    perspective: 1000px;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  display: flex;
+  gap: 1.5rem;
+  /* 24px */
+  padding-block: 1.5rem;
+  overflow-x: auto;
+  perspective: 1000px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+
 .rolling-gallery::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
+
 .rolling-gallery-item {
-    flex: 0 0 360px; /* Kart genişliği */
-    transition: transform 0.5s ease;
+  flex: 0 0 360px;
+  /* Kart genişliği */
+  transition: transform 0.5s ease;
 }
+
 .rolling-gallery-item:hover {
-    transform: rotateY(5deg) scale(1.05);
+  transform: rotateY(5deg) scale(1.05);
 }
 
 /* --- CodePen İnteraktif Harita Stilleri (GÜNCELLENDİ) --- */
 
 /* Tooltip (Bilgi Kutucuğu) Stili */
 .il-isimleri {
-  position: fixed; /* Fareyi tam takip etmesi için 'fixed' daha iyi */
-  z-index: 999; /* En üstte görünmesi için */
-  pointer-events: none; /* Farenin tooltip'i algılamasını engeller */
+  position: fixed;
+  /* Fareyi tam takip etmesi için 'fixed' daha iyi */
+  z-index: 999;
+  /* En üstte görünmesi için */
+  pointer-events: none;
+  /* Farenin tooltip'i algılamasını engeller */
 }
+
 .il-isimleri div {
   font-family: 'Open Sans', sans-serif;
   display: inline-block;
   background: #222;
   color: #fff;
   padding: 8px 16px;
-  border-radius: 4px; /* Tailwind 'rounded' */
+  border-radius: 4px;
+  /* Tailwind 'rounded' */
 }
 
 /* Varsayılan il stili (CodePen'deki gibi açık gri) */
 #svg-turkey-map path {
-  fill: #cccccc; 
+  fill: #cccccc;
   stroke: #fff;
   stroke-width: 0.5;
-  transition: fill 0.1s ease-in-out; /* Geçişi hızlandırdık */
+  transition: fill 0.1s ease-in-out;
+  /* Geçişi hızlandırdık */
   cursor: pointer;
 }
 
@@ -70,10 +92,62 @@ body {
 
 /* JavaScript'ten gelen 'hovered' sınıfı (GSB Mavi) */
 #svg-turkey-map path.hovered {
-  fill: #3B82F6; /* Tailwind blue-500 (Mavi) */
+  fill: #3B82F6;
+  /* Tailwind blue-500 (Mavi) */
 }
 
 /* JavaScript'ten gelen 'selected' sınıfı (GSB Siyah) */
 #svg-turkey-map path.selected {
-  fill: #111827; /* Tailwind gray-900 (Siyah) */
+  fill: #111827;
+  /* Tailwind gray-900 (Siyah) */
+}
+
+/* Custom Leaflet POI İkon Stili — varsayılan ikon stillerini kaldır */
+.custom-poi-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Harita tile'larını daha canlı/renkli yap */
+.leaflet-tile-pane {
+  filter: saturate(1.4) contrast(1.05) brightness(1.02);
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Numaralı durak ikonu pulse efekti */
+@keyframes orderPulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.35), 0 0 0 3px rgba(14,165,233,0.3); }
+  50% { box-shadow: 0 2px 8px rgba(0,0,0,0.35), 0 0 0 6px rgba(14,165,233,0.15); }
+}
+
+/* Segment bağlantı çizgisi animasyonu */
+@keyframes segmentFlow {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+/* Scrollbar gizleme utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

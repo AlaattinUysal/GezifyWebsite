@@ -1,208 +1,357 @@
 // src/pages/CreateRoutePage.jsx
-
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import RouteMap from '../components/RouteMap';
 
+const modeLabels = { driving: '🚗 Araç', walking: '🚶 Yürüme', ferry: '⛴️ Vapur' };
+const modeColors = { driving: '#0EA5E9', walking: '#10B981', ferry: '#F59E0B' };
+
+const formatDuration = (seconds) => {
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes} dk`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes > 0 ? `${hours} saat ${minutes} dk` : `${hours} saat`;
+};
+
 const CreateRoutePage = () => {
   const scrollRef = useRef(null);
+  const [selectedStops, setSelectedStops] = useState([]);
+  const [showRoute, setShowRoute] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [routeTitle, setRouteTitle] = useState('');
+  const [routeDescription, setRouteDescription] = useState('');
+  const [privacy, setPrivacy] = useState('public');
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [startTime, setStartTime] = useState('10:00');
 
-  // --- STATE ---
-  const [selectedStops, setSelectedStops] = useState([]); // Seçilen yerler
-  const [showRoute, setShowRoute] = useState(false);      // Rota çizilsin mi?
+  const handleRouteCalculated = (info) => { setRouteInfo(info); };
 
-  // --- POPÜLER YERLER VERİSİ (Koordinatlı) ---
   const popularPlaces = [
-    { id: 1, title: "Galata Kulesi", image: "https://galatakulesi.org/wp-content/uploads/2023/06/galata-kulesi-1-750x375.jpg", lat: 41.0256, lng: 28.9741 },
-    { id: 2, title: "Ayasofya", image: "https://muze.gov.tr/s3/MysFileLibrary/Ayasofya/ayasofya-02.jpg", lat: 41.0086, lng: 28.9802 },
-    { id: 3, title: "Sultanahmet Camii", image: "https://www.ktb.gov.tr/Resim/16632,sultanahmet-cami-istanbul.png?0", lat: 41.0054, lng: 28.9768 },
-    { id: 4, title: "Topkapı Sarayı", image: "https://muze.gov.tr/s3/MysFileLibrary/TopkapiSarayi/topkapisarayi-02.jpg", lat: 41.0115, lng: 28.9833 },
-    { id: 5, title: "Kapalıçarşı", image: "https://www.kapalicarsi.com.tr/wp-content/uploads/2020/09/kapalicarsi-tarihi.jpg", lat: 41.0107, lng: 28.9680 },
-    { id: 6, title: "Kız Kulesi", image: "https://kizkulesi.gov.tr/s3/MysFileLibrary/KizKulesi/kizkulesi-06.jpg", lat: 41.0211, lng: 29.0041 },
-    { id: 7, title: "Dolmabahçe Sarayı", image: "https://www.millisaraylar.gov.tr/images/saray-kosk-kasir/dolmabahce-sarayi/dolmabahce-sarayi-1.jpg", lat: 41.0391, lng: 29.0007 },
-    { id: 8, title: "Yerebatan Sarnıcı", image: "https://yerebatan.com/wp-content/uploads/2023/02/yerebatan-sarnici-genel-bakis.jpg", lat: 41.0084, lng: 28.9779 },
+    { id: 1,  title: "Galata Kulesi",     desc: "İstanbul'un simgesi.",               image: "/places/galata_kulesi.png",     lat: 41.0256, lng: 28.9741 },
+    { id: 2,  title: "Ayasofya",          desc: "Tarihin ve mimarinin şaheseri.",      image: "/places/ayasofya.png",          lat: 41.0086, lng: 28.9802 },
+    { id: 3,  title: "Sultanahmet Camii", desc: "Mavi Cami olarak bilinir.",           image: "/places/sultanahmet_camii.png", lat: 41.0054, lng: 28.9768 },
+    { id: 4,  title: "Topkapı Sarayı",    desc: "Osmanlı İmparatorluğu'nun merkezi.", image: "/places/topkapi_sarayi.png",    lat: 41.0115, lng: 28.9833 },
+    { id: 5,  title: "Kapalıçarşı",       desc: "Dünyanın en eski çarşılarından.",    image: "/places/kapalicarsi.png",       lat: 41.0107, lng: 28.9680 },
+    { id: 6,  title: "Kız Kulesi",        desc: "Boğaz'ın incisi.",                   image: "/places/kiz_kulesi.png",        lat: 41.0211, lng: 29.0041 },
+    { id: 7,  title: "Dolmabahçe Sarayı", desc: "Osmanlı'nın son sarayı.",            image: "/places/dolmabahce_sarayi.png", lat: 41.0391, lng: 29.0007 },
+    { id: 8,  title: "Yerebatan Sarnıcı", desc: "Yeraltının gizemli dünyası.",        image: "/places/yerebatan_sarnici.png", lat: 41.0084, lng: 28.9779 },
+    { id: 9,  title: "Büyükada",          desc: "Prens Adaları'nın en büyüğü.",       image: "/places/buyukada.png",          lat: 40.8724, lng: 29.1264 },
+    { id: 10, title: "Ortaköy Camii",     desc: "Boğaz manzaralı ikonik cami.",       image: "/places/ortakoy_camii.png",     lat: 41.0475, lng: 29.0278 },
+    { id: 12, title: "Heybeliada",        desc: "Yeşillik ve huzurun adresi.",        image: "/places/buyukada.png",          lat: 40.8761, lng: 29.0967 },
+    { id: 13, title: "Taksim Meydanı",    desc: "İstanbul'un modern kalbi.",          image: "/places/galata_kulesi.png",     lat: 41.0369, lng: 28.9850 },
   ];
 
-  // --- FONKSİYONLAR ---
-  
-  // Galeri Kaydırma (Slider)
+  const filteredPlaces = popularPlaces.filter(place =>
+    place.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const scroll = (direction) => {
     const { current } = scrollRef;
-    if (current) {
-      const scrollAmount = 300; 
-      current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
-    }
+    if (current) current.scrollBy({ left: direction === 'left' ? -250 : 250, behavior: 'smooth' });
   };
 
-  // Yer Ekle/Çıkar (Toggle)
   const togglePlace = (place) => {
     const isSelected = selectedStops.find(stop => stop.id === place.id);
-    
-    if (isSelected) {
-      setSelectedStops(selectedStops.filter(stop => stop.id !== place.id));
-    } else {
-      setSelectedStops([...selectedStops, place]);
-    }
-    // Durak değiştiğinde rotayı sıfırla ki tekrar 'Hesapla' desin
+    if (isSelected) setSelectedStops(selectedStops.filter(stop => stop.id !== place.id));
+    else setSelectedStops([...selectedStops, place]);
     setShowRoute(false);
+    setRouteInfo(null);
   };
 
+  const moveStop = (index, direction) => {
+    const newStops = [...selectedStops];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newStops.length) return;
+    [newStops[index], newStops[targetIndex]] = [newStops[targetIndex], newStops[index]];
+    setSelectedStops(newStops);
+    setShowRoute(false);
+    setRouteInfo(null);
+  };
+
+  // Rota hesaplandıktan sonra gösterilecek durak listesi
+  const displayStops = routeInfo?.orderedStops || selectedStops;
+
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark min-h-screen flex overflow-hidden">
-      
-      {/* --- SOL SIDEBAR --- */}
-      <aside className="w-64 bg-white dark:bg-card-dark border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0 transition-all duration-300">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-             <span className="material-symbols-outlined text-2xl">explore</span>
+    <div className="bg-gray-50 dark:bg-background-dark font-display text-text-light dark:text-text-dark h-screen flex overflow-hidden">
+
+      {/* ═══════════ SOL SIDEBAR ═══════════ */}
+      <aside className="w-56 bg-white dark:bg-card-dark border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0">
+        <div className="p-5 flex items-center gap-3">
+          <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white">
+            <span className="material-symbols-outlined text-xl">explore</span>
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Gezify</h1>
+          <h1 className="text-lg font-bold tracking-tight">Gezify</h1>
         </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <span className="material-symbols-outlined">explore</span><span className="text-sm font-medium">Keşfet</span>
+        <nav className="flex-1 px-3 space-y-1">
+          <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm">
+            <span className="material-symbols-outlined text-xl">explore</span><span className="font-medium">Keşfet</span>
           </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-medium">
-            <span className="material-symbols-outlined">route</span><span className="text-sm">Rotalarım</span>
+          <Link to="/yeni-rota" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-semibold text-sm">
+            <span className="material-symbols-outlined text-xl">route</span><span>Rotalarım</span>
           </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <span className="material-symbols-outlined">favorite</span><span className="text-sm font-medium">Favoriler</span>
+          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm">
+            <span className="material-symbols-outlined text-xl">favorite</span><span className="font-medium">Favoriler</span>
+          </Link>
+          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm">
+            <span className="material-symbols-outlined text-xl">person</span><span className="font-medium">Profil</span>
           </Link>
         </nav>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <button className="w-full h-12 bg-primary hover:bg-sky-600 text-white rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-lg">add</span> Yeni Rota
+        <div className="px-3 py-3">
+          <button className="w-full py-2.5 bg-primary hover:bg-sky-600 text-white rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+            Yeni Rota Oluştur
           </button>
+        </div>
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+          <p className="font-semibold text-gray-600 dark:text-gray-300 mb-2">Oluşturduğum Rotalar</p>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between group">
+              <span className="truncate">İstanbul'un Tarihi Yerleri</span>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-primary">edit</span>
+                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-red-500">delete</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between group">
+              <span className="truncate">Ege Kıyıları Macerası</span>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-primary">edit</span>
+                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-red-500">delete</span>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* --- ANA İÇERİK --- */}
-      <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-background-dark p-6 lg:p-8">
-        <div className="grid grid-cols-12 gap-6 h-full">
-            
-            {/* SOL KOLON: HARİTA VE GALERİ (8 Birim) */}
-            <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                
-                {/* Başlık ve Aksiyon */}
-                <div className="flex justify-between items-end">
-                    <div className="flex flex-col gap-1">
-                        <h1 className="text-text-light dark:text-text-dark text-3xl font-black tracking-tight">Yeni Rota Oluştur</h1>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Aşağıdan yer seçin, haritada belirsin. Hazır olunca rotayı hesaplayın.</p>
+      {/* ═══════════ ORTA — HARİTA + GALERİ ═══════════ */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-5 pt-4 pb-3 flex justify-between items-end flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-black tracking-tight">Yeni Rota Oluştur</h2>
+            <p className="text-gray-500 text-xs mt-0.5">Haritaya tıklayarak veya arama yaparak durak ekleyin.</p>
+          </div>
+          <button
+            onClick={() => setShowRoute(true)}
+            disabled={selectedStops.length < 2}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-white shadow transition-all hover:scale-105 flex-shrink-0 ${selectedStops.length < 2 ? 'bg-gray-300 cursor-not-allowed' : 'bg-primary hover:bg-sky-600'}`}
+          >
+            <span className="material-symbols-outlined text-base">alt_route</span>
+            En Yakın Rotayı Hesapla
+          </button>
+        </div>
+
+        <div className="flex-1 px-5 pb-2 min-h-0">
+          <div className="relative w-full h-full rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-0">
+            <RouteMap
+              selectedStops={selectedStops}
+              showRoute={showRoute}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onRouteCalculated={handleRouteCalculated}
+              startTime={startTime}
+            />
+          </div>
+        </div>
+
+        {/* Alt Galeri */}
+        <div className="px-5 py-3 relative group flex-shrink-0">
+          <button onClick={() => scroll('left')} className="absolute top-1/2 -translate-y-1/2 left-3 z-10 w-8 h-8 bg-white/90 rounded-full shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 text-primary cursor-pointer text-sm">
+            <span className="material-symbols-outlined text-lg">chevron_left</span>
+          </button>
+          <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-1 scroll-smooth no-scrollbar snap-x snap-mandatory">
+            {filteredPlaces.map((place) => {
+              const isSelected = selectedStops.find(stop => stop.id === place.id);
+              return (
+                <div key={place.id} onClick={() => togglePlace(place)}
+                  className={`flex-none w-36 aspect-[4/3] rounded-xl overflow-hidden cursor-pointer group/image relative snap-start shadow-sm transition-all duration-300 transform hover:-translate-y-1 border-2 ${isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-gray-200'}`}
+                >
+                  <img src={place.image} alt={place.title} className="w-full h-full object-cover transition-transform duration-500 group-hover/image:scale-110" />
+                  {isSelected && (
+                    <div className="absolute top-1.5 right-1.5 bg-primary text-white rounded-full p-0.5 shadow-md z-20">
+                      <span className="material-symbols-outlined text-xs font-bold">check</span>
                     </div>
-                    {/* Rota Hesapla Butonu */}
-                    <button 
-                      onClick={() => setShowRoute(true)}
-                      disabled={selectedStops.length < 1}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-105 ${selectedStops.length < 1 ? 'bg-gray-300 cursor-not-allowed' : 'bg-secondary hover:bg-rose-500'}`}
-                    >
-                      <span className="material-symbols-outlined">alt_route</span>
-                      En Yakın Rotayı Hesapla
-                    </button>
-                </div>
-
-                {/* --- HARİTA ALANI --- */}
-                <div className="relative w-full h-[500px] rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden z-0 bg-white">
-                    {/* Akıllı Harita Bileşeni */}
-                    <RouteMap selectedStops={selectedStops} showRoute={showRoute} />
-                </div>
-
-                {/* --- RESİM GALERİSİ (SLIDER) --- */}
-                <div className="relative group">
-                    {/* Sol Ok */}
-                    <button 
-                        onClick={() => scroll('left')}
-                        className="absolute top-1/2 -translate-y-1/2 left-0 z-10 w-10 h-10 bg-white/90 dark:bg-black/70 rounded-full shadow-lg flex items-center justify-center -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 text-primary cursor-pointer border border-gray-100 dark:border-gray-600"
-                    >
-                        <span className="material-symbols-outlined">chevron_left</span>
-                    </button>
-
-                    {/* Galeri Kartları */}
-                    <div 
-                        ref={scrollRef}
-                        className="flex gap-4 overflow-x-auto pb-4 scroll-smooth no-scrollbar snap-x snap-mandatory"
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                    >
-                        {popularPlaces.map((place) => {
-                            const isSelected = selectedStops.find(stop => stop.id === place.id);
-                            return (
-                                <div 
-                                  key={place.id} 
-                                  onClick={() => togglePlace(place)}
-                                  className={`flex-none w-48 aspect-[4/3] rounded-lg overflow-hidden cursor-pointer group/image relative snap-start shadow-sm transition-all duration-300 transform hover:-translate-y-1 border-2 ${isSelected ? 'border-primary ring-2 ring-primary/30 scale-105' : 'border-transparent'}`}
-                                >
-                                    <img src={place.image} alt={place.title} className="w-full h-full object-cover transition-transform duration-500 group-hover/image:scale-110" />
-                                    
-                                    {/* Seçili İkonu (Tik İşareti) */}
-                                    {isSelected && (
-                                      <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 shadow-md z-20 animate-bounce">
-                                        <span className="material-symbols-outlined text-sm font-bold">check</span>
-                                      </div>
-                                    )}
-
-                                    {/* Hover Efekti: + Ekle İkonu */}
-                                    {!isSelected && (
-                                      <div className="absolute top-2 right-2 bg-white/30 backdrop-blur-sm p-1 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity z-20">
-                                          <span className="material-symbols-outlined text-white text-lg">add</span>
-                                      </div>
-                                    )}
-
-                                    {/* İsim Alanı */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-3">
-                                        <p className="text-white font-bold text-sm shadow-black drop-shadow-md">{place.title}</p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Sağ Ok */}
-                    <button 
-                        onClick={() => scroll('right')}
-                        className="absolute top-1/2 -translate-y-1/2 right-0 z-10 w-10 h-10 bg-white/90 dark:bg-black/70 rounded-full shadow-lg flex items-center justify-center translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 text-primary cursor-pointer border border-gray-100 dark:border-gray-600"
-                    >
-                        <span className="material-symbols-outlined">chevron_right</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* SAĞ KOLON: FORM / LİSTE (4 Birim) */}
-            <div className="col-span-12 lg:col-span-4 bg-white dark:bg-card-dark rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col gap-4 h-fit">
-                <h3 className="font-bold text-lg text-text-light dark:text-text-dark border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">list_alt</span>
-                  Rota Listesi
-                </h3>
-                
-                {selectedStops.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-center border-2 border-dashed border-gray-100 rounded-xl">
-                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">map</span>
-                    <p className="text-sm">Henüz bir durak eklemediniz.</p>
-                    <p className="text-xs mt-1 text-gray-300">Soldaki galeriden yer seçin.</p>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
+                    <p className="text-white font-bold text-xs drop-shadow-md">{place.title}</p>
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    <ul className="flex flex-col gap-2 overflow-y-auto max-h-[400px] pr-1">
-                      {selectedStops.map((stop, index) => (
-                        <li key={stop.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 group hover:border-primary/30 transition-colors">
-                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold shadow-sm">{index + 1}</span>
-                          <span className="text-sm font-medium text-text-light dark:text-text-dark flex-1">{stop.title}</span>
-                          <button onClick={() => togglePlace(stop)} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50">
-                            <span className="material-symbols-outlined text-lg">close</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    
-                    {/* Rota Özeti */}
-                    <div className="mt-2 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between text-xs text-gray-500">
-                       <span>Toplam Durak: <b>{selectedStops.length}</b></span>
-                       <span>Tahmini Süre: <b>{(selectedStops.length * 45)} dk</b></span>
-                    </div>
-                  </div>
-                )}
-            </div>
-
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={() => scroll('right')} className="absolute top-1/2 -translate-y-1/2 right-3 z-10 w-8 h-8 bg-white/90 rounded-full shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 text-primary cursor-pointer text-sm">
+            <span className="material-symbols-outlined text-lg">chevron_right</span>
+          </button>
         </div>
       </main>
+
+      {/* ═══════════ SAĞ PANEL — ROTA DETAYLARI ═══════════ */}
+      <aside className="w-72 bg-white dark:bg-card-dark border-l border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
+        <div className="p-5 flex flex-col gap-4 flex-1">
+
+          {/* Rota Başlığı */}
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Rota Başlığı</label>
+            <input type="text" placeholder="İstanbul'un Tarihi Yerleri" value={routeTitle} onChange={(e) => setRouteTitle(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all placeholder-gray-400" />
+          </div>
+
+          {/* Rota Başlangıç Saati */}
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Gezi Başlangıç Saati</label>
+            <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-gray-700 dark:text-gray-300" />
+            <p className="text-[10px] text-gray-400 mt-1">Rota süresi, bu saatteki tahmini trafiğe göre optimize edilir.</p>
+          </div>
+
+          {/* Rota Açıklaması */}
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Rota Açıklaması</label>
+            <textarea placeholder="İstanbul'un kalbinde, tarihin ve kültürün iç içe geçtiği eşsiz bir yolculuk..." value={routeDescription} onChange={(e) => setRouteDescription(e.target.value)} rows={3}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none placeholder-gray-400" />
+          </div>
+
+          {/* Rota Bilgisi */}
+          {routeInfo && (
+            <div className="bg-gradient-to-r from-primary/10 to-sky-100/50 dark:from-primary/20 dark:to-sky-900/20 rounded-xl p-3 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-primary text-base">route</span>
+                <span className="text-xs font-bold text-primary">Rota Hesaplandı</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white/70 dark:bg-gray-800/70 rounded-lg p-2 text-center">
+                  <p className="text-[10px] text-gray-500">Toplam Mesafe</p>
+                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{(routeInfo.distance / 1000).toFixed(1)} km</p>
+                </div>
+                <div className="bg-white/70 dark:bg-gray-800/70 rounded-lg p-2 text-center">
+                  <p className="text-[10px] text-gray-500">Tahmini Süre</p>
+                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{formatDuration(routeInfo.duration)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════ ADIM ADIM ROTA REHBERİ ═══════ */}
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">
+              {routeInfo?.segments ? 'Rota Adımları' : 'Duraklar'}
+            </label>
+
+            {displayStops.length === 0 ? (
+              <div className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl p-4 text-center text-gray-400 text-xs">
+                <span className="material-symbols-outlined text-2xl mb-1 block opacity-40">map</span>
+                Henüz durak eklenmedi
+              </div>
+            ) : routeInfo?.segments ? (
+              /* ══ HESAPLANMIŞ ROTA — Adım adım ══ */
+              <div className="space-y-0">
+                {/* Başlangıç */}
+                <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white text-[10px] font-black flex-shrink-0">S</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate">Başlangıç Noktası</p>
+                    <p className="text-[10px] text-gray-400">Mevcut konumunuz</p>
+                  </div>
+                </div>
+
+                {routeInfo.segments.map((seg, idx) => {
+                  const subs = seg.subSegments || [seg];
+                  return (
+                  <React.Fragment key={idx}>
+                    {/* Segment bağlantı çizgisi */}
+                    {subs.map((sub, sidx) => (
+                      <div key={`sub-${sidx}`} className="flex items-center gap-2 py-1 pl-5">
+                        <div className="flex flex-col items-center">
+                          <div className="w-0.5 h-3 rounded-full" style={{ backgroundColor: modeColors[sub.mode] }}></div>
+                          <div className="w-0.5 h-1 rounded-full" style={{ backgroundColor: modeColors[sub.mode], opacity: 0.4 }}></div>
+                          <div className="w-0.5 h-3 rounded-full" style={{ backgroundColor: modeColors[sub.mode] }}></div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg px-2 py-1 border border-gray-100 dark:border-gray-700">
+                          <span className="text-[11px]">{modeLabels[sub.mode]}</span>
+                          <span className="text-[10px] text-gray-400 font-medium">
+                            {sub.toTitle ? `${sub.fromTitle} → ${sub.toTitle} ` : ''}
+                            ({(sub.distance / 1000).toFixed(1)} km · {formatDuration(sub.duration)})
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Hedef durak */}
+                    <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-colors">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full text-white text-[10px] font-black flex-shrink-0" style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}>
+                        {idx + 1}
+                      </span>
+                      {routeInfo.orderedStops[idx]?.image && (
+                        <img src={routeInfo.orderedStops[idx].image} alt={seg.to.title} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold truncate">{seg.to.title}</p>
+                        <p className="text-[10px] text-gray-400 truncate">
+                          {routeInfo.orderedStops[idx]?.desc || ''}
+                        </p>
+                      </div>
+                    </div>
+                  </React.Fragment>
+                  );
+                })}
+              </div>
+            ) : (
+              /* ══ HENÜZ HESAPLANMAMIŞ — Basit liste ══ */
+              <div className="space-y-2">
+                {displayStops.map((stop, index) => (
+                  <div key={stop.id} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 group hover:border-primary/30 transition-colors">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-md bg-primary text-white text-[10px] font-bold mt-0.5 flex-shrink-0">{index + 1}</span>
+                    {stop.image && (
+                      <img src={stop.image} alt={stop.title} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold truncate">{stop.title}</p>
+                      <p className="text-[10px] text-gray-400 truncate">{stop.desc || ''}</p>
+                    </div>
+                    <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => moveStop(index, 'up')} className="text-gray-400 hover:text-primary p-0.5" disabled={index === 0}>
+                        <span className="material-symbols-outlined text-sm">keyboard_arrow_up</span>
+                      </button>
+                      <button onClick={() => moveStop(index, 'down')} className="text-gray-400 hover:text-primary p-0.5" disabled={index === selectedStops.length - 1}>
+                        <span className="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+                      </button>
+                    </div>
+                    <button onClick={() => togglePlace(stop)} className="text-gray-400 hover:text-red-500 transition-colors p-0.5 mt-0.5">
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+                ))}
+                <p className="text-[10px] text-gray-400 text-center mt-1">Durakları sürükleyerek sıralamayı değiştirin.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Gizlilik Ayarları */}
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Gizlilik Ayarları</label>
+            <div className="space-y-2">
+              <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${privacy === 'public' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}>
+                <input type="radio" name="privacy" value="public" checked={privacy === 'public'} onChange={() => setPrivacy('public')} className="mt-1 accent-primary" />
+                <div>
+                  <p className="text-xs font-semibold text-text-light dark:text-text-dark">Herkese Açık</p>
+                  <p className="text-[10px] text-gray-400">Diğer gezginler bu rotayı görebilir.</p>
+                </div>
+              </label>
+              <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${privacy === 'private' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}>
+                <input type="radio" name="privacy" value="private" checked={privacy === 'private'} onChange={() => setPrivacy('private')} className="mt-1 accent-primary" />
+                <div>
+                  <p className="text-xs font-semibold text-text-light dark:text-text-dark">Gizli</p>
+                  <p className="text-[10px] text-gray-400">Bu rota sadece sana özel.</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+          <button className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Kaydet</button>
+          <button className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-sky-600 text-white text-sm font-bold shadow-sm transition-colors">Yayınla</button>
+        </div>
+      </aside>
     </div>
   );
 };
