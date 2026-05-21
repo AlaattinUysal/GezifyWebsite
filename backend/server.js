@@ -14,7 +14,7 @@ const PORT = 3001;
 // ── Middleware ─────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
 app.use(express.json());
@@ -68,7 +68,7 @@ app.post('/api/register', async (req, res) => {
     }
 
     // Email zaten kayıtlı mı?
-    const existingUser = findUserByEmail(email.toLowerCase());
+    const existingUser = await findUserByEmail(email.toLowerCase());
     if (existingUser) {
       return res.status(409).json({
         success: false,
@@ -80,7 +80,7 @@ app.post('/api/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Kullanıcıyı oluştur
-    const newUser = createUser(name.trim(), email.toLowerCase(), passwordHash);
+    const newUser = await createUser(name.trim(), email.toLowerCase(), passwordHash);
 
     console.log(`✅ Yeni kullanıcı kaydedildi: ${email}`);
 
@@ -119,7 +119,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     // Kullanıcıyı bul
-    const user = findUserByEmail(email.toLowerCase());
+    const user = await findUserByEmail(email.toLowerCase());
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -159,13 +159,13 @@ app.post('/api/login', async (req, res) => {
 
 // ── GET USER ───────────────────────────────────────────────────────────────────
 // GET /api/user?email=...
-app.get('/api/user', (req, res) => {
+app.get('/api/user', async (req, res) => {
   const { email } = req.query;
   if (!email) {
     return res.status(400).json({ success: false, message: 'Email parametresi gerekli.' });
   }
 
-  const user = findUserByEmail(email.toLowerCase());
+  const user = await findUserByEmail(email.toLowerCase());
   if (!user) {
     return res.status(404).json({ success: false, message: 'Kullanıcı bulunamadı.' });
   }
@@ -233,10 +233,59 @@ app.get('/auth/facebook/callback',
 );
 
 // ── DEBUG: Tüm kullanıcılar (geliştirme ortamı için) ──────────────────────────
-app.get('/api/users', (req, res) => {
-  const users = getAllUsers();
+app.get('/api/users', async (req, res) => {
+  const users = await getAllUsers();
   res.json({ success: true, count: users.length, users });
 });
+
+// ── Profil Güncelleme ─────────────────────────────────────────────────────────
+app.put('/api/profile', async (req, res) => {
+  const { id, name, currentPassword, newPassword } = req.body;
+  if (!id || !name) return res.status(400).json({ message: 'id ve name zorunludur.' });
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabase = createClient(
+    'https://mqronanpwluzofvxnmmr.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcm9uYW5wd2x1em9mdnhubW1yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTMwMDQzNCwiZXhwIjoyMDk0ODc2NDM0fQ.HGw48E_A3W347cPekUaxJyv1wEJeubeex8Ce2dj9YWg'
+  );
+
+  let updateData = { name };
+
+  if (newPassword) {
+    if (!currentPassword) return res.status(400).json({ message: 'Mevcut şifrenizi girmelisiniz.' });
+    
+    // id'yi integer olarak sorgula
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) return res.status(400).json({ message: 'Geçersiz kullanıcı ID.' });
+
+    // Mevcut şifreyi doğrula
+    const { data: userRecord, error: queryError } = await supabase
+      .from('users')
+      .select('id, password_hash')
+      .eq('id', numericId)
+      .single();
+
+    console.log('Şifre değiştirme sorgusu → id:', numericId, '| user:', userRecord, '| hata:', queryError?.message);
+
+    if (!userRecord) {
+      return res.status(401).json({ message: 'Şifreyi doğrulayamadık. Lütfen tekrar deneyin.' });
+    }
+    if (!userRecord.password_hash || userRecord.password_hash.trim() === '') {
+      return res.status(400).json({ message: 'Google veya Facebook ile giriş yapıldığı için şifre değiştirilemez.' });
+    }
+    
+    const isPasswordValid = await bcrypt.compare(currentPassword, userRecord.password_hash);
+    if (!isPasswordValid) return res.status(401).json({ message: 'Mevcut şifrenizi yanlış girdiniz.' });
+    
+    // Yeni şifreyi hashle
+    const saltRounds = 10;
+    updateData.password_hash = await bcrypt.hash(newPassword, saltRounds);
+  }
+
+  const { error } = await supabase.from('users').update(updateData).eq('id', id);
+  if (error) return res.status(500).json({ message: 'Güncelleme başarısız.' });
+  res.json({ success: true });
+});
+
 
 // ── Sunucuyu Başlat ────────────────────────────────────────────────────────────
 async function startServer() {

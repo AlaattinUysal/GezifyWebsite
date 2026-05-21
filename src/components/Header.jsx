@@ -9,40 +9,40 @@ const menuItems = [
     id: 'hesabim',
     label: 'Hesabım',
     icon: 'manage_accounts',
-    href: '/profil',
+    href: '/profil?tab=hesabim',
   },
   {
     id: 'degerlendirmelerim',
-    label: 'Değerlendirmelerim',
+    label: 'Değerlendirmelerim / Yorumlarım',
     icon: 'star_rate',
-    href: '/degerlendirmeler',
+    href: '/profil?tab=degerlendirmelerim',
   },
   {
     id: 'rotalarim',
     label: 'Rotalarım',
     icon: 'route',
-    href: '/rotalarim',
+    href: '/profil?tab=rotalarim',
   },
   {
     id: 'begendiklerim',
     label: 'Beğendiğim Rotalar ve Öneriler',
     icon: 'favorite',
-    href: '/begendiklerim',
+    href: '/profil?tab=begendigim',
   },
   { divider: true },
   {
-    id: 'gezify-plus',
+    id: 'gezify_plus',
     label: 'Gezify Plus',
     icon: 'workspace_premium',
-    href: '/plus',
+    href: '/profil?tab=gezify_plus',
     badge: 'Yeni',
     badgeColor: 'bg-primary text-white',
   },
   {
-    id: 'gezify-asistan',
+    id: 'gezify_asistan',
     label: 'Gezify Asistan',
     icon: 'smart_toy',
-    href: '/asistan',
+    href: '/profil?tab=gezify_asistan',
   },
   { divider: true },
   {
@@ -102,8 +102,8 @@ const Header = () => {
         setBusy(false);
         navigate('/');
       }, 800);
-    } else {
-      // Çıkış yap dışındaki tüm linkler şimdilik sessizce hiçbir şey yapmıyor
+    } else if (item.href) {
+      navigate(item.href);
     }
   };
 

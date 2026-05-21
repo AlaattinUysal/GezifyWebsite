@@ -1,7 +1,9 @@
-// src/pages/CreateRoutePage.jsx
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import RouteMap from '../components/RouteMap';
+import { supabase } from '../services/supabaseClient';
+import { getCurrentUser } from '../services/authService';
 
 const modeLabels = { driving: '🚗 Araç', walking: '🚶 Yürüme', ferry: '⛴️ Vapur' };
 const modeColors = { driving: '#0EA5E9', walking: '#10B981', ferry: '#F59E0B' };
@@ -24,6 +26,34 @@ const CreateRoutePage = () => {
   const [privacy, setPrivacy] = useState('public');
   const [routeInfo, setRouteInfo] = useState(null);
   const [startTime, setStartTime] = useState('10:00');
+  const [myRoutes, setMyRoutes] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingRouteId, setEditingRouteId] = useState(null);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
+  const [confirmModal, setConfirmModal] = useState({ visible: false, routeId: null });
+  const [plannedDate, setPlannedDate] = useState('');
+  const currentUser = getCurrentUser();
+  const [searchParams] = useSearchParams();
+
+  // Takvimden gelince tarihi otomatik doldur
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam) setPlannedDate(dateParam);
+  }, []);
+
+  // Her rota farklı bir thumbnail alır — indekse göre döngüsel seçim
+  const routeThumbs = [
+    '/route_thumbs/thumb1.png',
+    '/route_thumbs/thumb2.png',
+    '/route_thumbs/thumb3.png',
+    '/route_thumbs/thumb4.png',
+  ];
+  const getRouteThumbnail = (index) => routeThumbs[index % routeThumbs.length];
+
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => setToast({ visible: false, message: '', type: 'success' }), 3000);
+  };
 
   const handleRouteCalculated = (info) => { setRouteInfo(info); };
 
@@ -72,11 +102,163 @@ const CreateRoutePage = () => {
   // Rota hesaplandıktan sonra gösterilecek durak listesi
   const displayStops = routeInfo?.orderedStops || selectedStops;
 
+  // Rotaları getir
+  React.useEffect(() => {
+    if (currentUser) {
+      fetchMyRoutes();
+    }
+  }, []);
+
+  const fetchMyRoutes = async () => {
+    if (!currentUser) return;
+    const userId = parseInt(currentUser.id, 10);
+    if (isNaN(userId)) { console.error('Geçersiz user id:', currentUser.id); return; }
+    const { data, error } = await supabase
+      .from('routes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) { console.error('fetchMyRoutes error:', error); }
+    if (!error && data) { setMyRoutes(data); }
+  };
+
+  const handleSaveRoute = async () => {
+    if (!currentUser) {
+      showToast("Rota kaydetmek için lütfen giriş yapın.", 'error');
+      return;
+    }
+    if (!routeTitle.trim()) {
+      showToast("Lütfen rota başlığı girin.", 'error');
+      return;
+    }
+    if (selectedStops.length === 0) {
+      showToast("Lütfen en az bir durak ekleyin.", 'error');
+      return;
+    }
+
+    setIsSaving(true);
+    const userId = parseInt(currentUser.id, 10);
+    if (isNaN(userId)) {
+      showToast('Kullanıcı kimliği geçersiz. Lütfen tekrar giriş yapın.', 'error');
+      setIsSaving(false);
+      return;
+    }
+    const routeData = {
+      user_id: userId,
+      title: routeTitle,
+      description: routeDescription,
+      start_time: startTime,
+      planned_date: plannedDate || null,
+      privacy,
+      route_info: {
+        selectedStops,
+        routeInfo
+      }
+    };
+
+    let responseError = null;
+
+    if (editingRouteId) {
+      // Mevcut rotayı güncelle
+      const { error } = await supabase
+        .from('routes')
+        .update(routeData)
+        .eq('id', editingRouteId);
+      responseError = error;
+    } else {
+      // Yeni rota ekle
+      const { error } = await supabase
+        .from('routes')
+        .insert([routeData]);
+      responseError = error;
+    }
+
+    setIsSaving(false);
+
+    if (responseError) {
+      console.error('Supabase Error:', responseError);
+      showToast(`Rota kaydedilemedi: ${responseError.message || responseError.code || 'Bilinmeyen hata'}`, 'error');
+    } else {
+      showToast(editingRouteId ? 'Rota başarıyla güncellendi!' : 'Rota başarıyla kaydedildi!');
+      fetchMyRoutes();
+    }
+  };
+
+  const createNewRoute = () => {
+    setEditingRouteId(null);
+    setRouteTitle('');
+    setRouteDescription('');
+    setSelectedStops([]);
+    setRouteInfo(null);
+    setStartTime('10:00');
+    setPlannedDate('');
+    setPrivacy('public');
+    setShowRoute(false);
+  };
+
+  const deleteRoute = async (routeId) => {
+    setConfirmModal({ visible: true, routeId });
+  };
+
+  const confirmDelete = async () => {
+    const routeId = confirmModal.routeId;
+    setConfirmModal({ visible: false, routeId: null });
+    const { error } = await supabase.from('routes').delete().eq('id', routeId);
+    if (!error) {
+      showToast("Rota silindi.", "success");
+      if (editingRouteId === routeId) createNewRoute();
+      fetchMyRoutes();
+    }
+  };
+  
+  const loadRoute = (route) => {
+    setEditingRouteId(route.id);
+    setRouteTitle(route.title);
+    setRouteDescription(route.description || '');
+    setStartTime(route.start_time || '10:00');
+    setPlannedDate(route.planned_date || '');
+    setPrivacy(route.privacy || 'public');
+    if(route.route_info) {
+      setSelectedStops(route.route_info.selectedStops || []);
+      setRouteInfo(route.route_info.routeInfo || null);
+    }
+  };
+
   return (
-    <div className="bg-gray-50 dark:bg-background-dark font-display text-text-light dark:text-text-dark h-screen flex overflow-hidden">
+    <div className="bg-gray-50 dark:bg-background-dark font-display text-text-light dark:text-text-dark h-screen flex overflow-hidden relative">
+      
+      {/* Toast Notification */}
+      {toast.visible && (
+        <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-xl border text-sm font-semibold flex items-center gap-2.5 whitespace-nowrap ${toast.type === 'error' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+          <span className="material-symbols-outlined text-xl">{toast.type === 'error' ? 'error' : 'check_circle'}</span>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Custom Confirm Modal */}
+      {confirmModal.visible && (
+        <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white dark:bg-card-dark rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-80 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-red-500">delete</span>
+              </div>
+              <div>
+                <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">Rotayı Sil</p>
+                <p className="text-xs text-gray-500 mt-0.5">Bu rotayı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-1">
+              <button onClick={() => setConfirmModal({ visible: false, routeId: null })} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Vazgeç</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-colors">Evet, Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══════════ SOL SIDEBAR ═══════════ */}
-      <aside className="w-56 bg-white dark:bg-card-dark border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0">
+      <aside className="w-64 bg-white dark:bg-card-dark border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0">
         <div className="p-5 flex items-center gap-3">
           <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white">
             <span className="material-symbols-outlined text-xl">explore</span>
@@ -90,36 +272,39 @@ const CreateRoutePage = () => {
           <Link to="/yeni-rota" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-semibold text-sm">
             <span className="material-symbols-outlined text-xl">route</span><span>Rotalarım</span>
           </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm">
+          <div className="mt-1 mb-2 ml-4 border-l-2 border-gray-100 dark:border-gray-800 pl-3 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
+            {myRoutes.length > 0 ? myRoutes.map((route, index) => {
+              const thumb = getRouteThumbnail(index);
+              const isSelected = editingRouteId === route.id;
+              return (
+                <div key={route.id} className={`flex items-center gap-3 group p-2 rounded-xl transition-all cursor-pointer border ${isSelected ? 'bg-primary/5 border-primary/20' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-700'}`} onClick={() => loadRoute(route)}>
+                  <img src={thumb} alt="rota_resmi" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 shadow-sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-gray-700 dark:text-gray-300'}`}>{route.title}</p>
+                    <p className="text-[10px] text-gray-400 truncate">{route.route_info?.selectedStops?.length || 0} durak</p>
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <span className="material-symbols-outlined text-sm cursor-pointer hover:text-red-500 text-gray-400" onClick={(e) => { e.stopPropagation(); deleteRoute(route.id); }}>delete</span>
+                  </div>
+                </div>
+              );
+            }) : (
+              <p className="text-[11px] text-gray-400 italic py-2">Henüz kayıtlı rotanız yok.</p>
+            )}
+          </div>
+
+          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm flex-shrink-0">
             <span className="material-symbols-outlined text-xl">favorite</span><span className="font-medium">Favoriler</span>
           </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm">
+          <Link to="/profil" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm flex-shrink-0">
             <span className="material-symbols-outlined text-xl">person</span><span className="font-medium">Profil</span>
           </Link>
         </nav>
-        <div className="px-3 py-3">
-          <button className="w-full py-2.5 bg-primary hover:bg-sky-600 text-white rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+        <div className="px-4 py-4 mt-auto border-t border-gray-100 dark:border-gray-800">
+          <button onClick={createNewRoute} className="w-full py-2.5 bg-primary hover:bg-sky-600 text-white rounded-xl font-bold text-sm shadow-md shadow-primary/20 transition-all flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-lg">add_circle</span>
             Yeni Rota Oluştur
           </button>
-        </div>
-        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-          <p className="font-semibold text-gray-600 dark:text-gray-300 mb-2">Oluşturduğum Rotalar</p>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between group">
-              <span className="truncate">İstanbul'un Tarihi Yerleri</span>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-primary">edit</span>
-                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-red-500">delete</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between group">
-              <span className="truncate">Ege Kıyıları Macerası</span>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-primary">edit</span>
-                <span className="material-symbols-outlined text-sm cursor-pointer hover:text-red-500">delete</span>
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
 
@@ -201,6 +386,19 @@ const CreateRoutePage = () => {
             <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-gray-700 dark:text-gray-300" />
             <p className="text-[10px] text-gray-400 mt-1">Rota süresi, bu saatteki tahmini trafiğe göre optimize edilir.</p>
+          </div>
+
+          {/* Gezi Tarihi */}
+          <div>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Gezi Tarihi (opsiyonel)</label>
+            <input
+              type="date"
+              value={plannedDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setPlannedDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-gray-700 dark:text-gray-300"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">Takviminizde bu tarihe atanmış rota olarak görünür.</p>
           </div>
 
           {/* Rota Açıklaması */}
@@ -348,7 +546,12 @@ const CreateRoutePage = () => {
         </div>
 
         <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
-          <button className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Kaydet</button>
+          <button 
+            onClick={handleSaveRoute} 
+            disabled={isSaving}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
+            {isSaving ? 'Kaydediliyor...' : (editingRouteId ? 'Değişiklikleri Kaydet' : 'Kaydet')}
+          </button>
           <button className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-sky-600 text-white text-sm font-bold shadow-sm transition-colors">Yayınla</button>
         </div>
       </aside>

@@ -9,9 +9,13 @@ passport.serializeUser((user, done) => {
   done(null, user.email);
 });
 
-passport.deserializeUser((email, done) => {
-  const user = findUserByEmail(email);
-  done(null, user);
+passport.deserializeUser(async (email, done) => {
+  try {
+    const user = await findUserByEmail(email);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
 });
 
 // Google Strategy
@@ -21,9 +25,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: 'http://localhost:3001/auth/google/callback'
     },
-    (accessToken, refreshToken, profile, done) => {
+    async (accessToken, refreshToken, profile, done) => {
       try {
-        const user = findOrCreateOAuthUser('google', profile);
+        const user = await findOrCreateOAuthUser('google', profile);
         return done(null, user);
       } catch (err) {
         return done(err, null);
@@ -42,9 +46,9 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
       callbackURL: 'http://localhost:3001/auth/facebook/callback',
       profileFields: ['id', 'displayName', 'photos', 'email']
     },
-    (accessToken, refreshToken, profile, done) => {
+    async (accessToken, refreshToken, profile, done) => {
       try {
-        const user = findOrCreateOAuthUser('facebook', profile);
+        const user = await findOrCreateOAuthUser('facebook', profile);
         return done(null, user);
       } catch (err) {
         return done(err, null);

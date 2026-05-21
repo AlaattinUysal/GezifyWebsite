@@ -1,15 +1,34 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../services/supabaseClient';
+import { getCurrentUser } from '../services/authService';
+import DestinationModal from './DestinationModal';
 
 const PopularDestinations = () => {
   const scrollRef = useRef(null);
   const navigate = useNavigate();
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
-
-  // Takvim state'leri
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [dummyRoute, setDummyRoute] = useState(null);
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [userRoutes, setUserRoutes] = useState([]);
+  const [selectedDestination, setSelectedDestination] = useState(null);
+  const currentUser = getCurrentUser();
+
+  // Kullanıcı rotalarını çek
+  useEffect(() => {
+    const fetchRoutes = async () => {
+      if (!currentUser) return;
+      const userId = parseInt(currentUser.id, 10);
+      const { data, error } = await supabase
+        .from('routes')
+        .select('*')
+        .eq('user_id', userId)
+        .not('planned_date', 'is', null);
+      if (!error && data) setUserRoutes(data);
+    };
+    fetchRoutes();
+  }, [showCalendar]); // Takvim açıldığında yenile
 
   const destinations = [
     {
@@ -72,11 +91,13 @@ const PopularDestinations = () => {
 
   const nextMonth = () => {
     setCurrentDate(new Date(year, month + 1, 1));
-    setDummyRoute(null);
+    setSelectedRoute(null);
+    setSelectedDate('');
   };
   const prevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
-    setDummyRoute(null);
+    setSelectedRoute(null);
+    setSelectedDate('');
   };
 
   const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
@@ -98,21 +119,31 @@ const PopularDestinations = () => {
     days.push(i);
   }
 
-  // Atanmış rotalar (Kullanıcı talebi: 12 Mart, 15 Nisan gibi özel atamalar)
-  const plannedRoutes = {
-    [`${year}-2-12`]: { title: 'Tarihi Yarımada Turu', desc: 'Ayasofya, Sultanahmet, Topkapı Sarayı', image: 'https://media.cntravellerme.com/photos/6867aeba85cc078a3f1e5ad3/1:1/w_2160,h_2160,c_limit/1480863367' }, // 12 Mart (month: 2)
-    [`${year}-3-15`]: { title: 'Boğaz Turu & Ortaköy', desc: 'Eminönü Boğaz Turu, Ortaköy Sahil, Bebek', image: 'https://cdn.britannica.com/34/10734-050-29C0B3FE/Clock-tower-Izmir-Turkey.jpg' } // 15 Nisan (month: 3)
+  // Tarih string'i oluştur: YYYY-MM-DD
+  const makeDateKey = (y, m, d) =>
+    `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  // Gün için rota var mı?
+  const getRouteForDay = (day) => {
+    if (!day) return null;
+    const key = makeDateKey(year, month, day);
+    return userRoutes.find(r => r.planned_date && r.planned_date.startsWith(key)) || null;
   };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const handleDayClick = (day) => {
     if (!day) return;
-    const key = `${year}-${month}-${day}`;
-    if (plannedRoutes[key]) {
-      setDummyRoute(plannedRoutes[key]);
+    const dayDate = new Date(year, month, day);
+    if (dayDate < today) return; // Geçmiş günleri tıklanamaz yap
+    const route = getRouteForDay(day);
+    if (route) {
+      setSelectedRoute(route);
       setSelectedDate('');
     } else {
-      setDummyRoute(null);
-      setSelectedDate(`${year}-${(month+1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
+      setSelectedRoute(null);
+      setSelectedDate(makeDateKey(year, month, day));
     }
   };
 
@@ -149,8 +180,9 @@ const PopularDestinations = () => {
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {destinations.map((dest, index) => (
-            <div 
-              key={`${dest.id}-${index}`} 
+            <div
+              key={`${dest.id}-${index}`}
+              onClick={() => setSelectedDestination(dest)}
               className="relative flex-none w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] h-[500px] rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:shadow-2xl cursor-pointer group snap-start"
             >
               <img 
@@ -251,22 +283,26 @@ const PopularDestinations = () => {
                 <div className="grid grid-cols-7 gap-2">
                   {days.map((day, idx) => {
                     if (!day) return <div key={`empty-${idx}`} className="h-12"></div>;
-                    const key = `${year}-${month}-${day}`;
-                    const hasRoute = plannedRoutes[key];
-                    const isSelected = selectedDate === `${year}-${(month+1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}` || (dummyRoute && dummyRoute.title === hasRoute?.title);
+                    const routeOnDay = getRouteForDay(day);
+                    const dayKey = makeDateKey(year, month, day);
+                    const isSelected = selectedDate === dayKey || selectedRoute?.planned_date?.startsWith(dayKey);
+                    const isPast = new Date(year, month, day) < today;
 
                     return (
                       <button
                         key={day}
                         onClick={() => handleDayClick(day)}
-                        className={`relative h-12 rounded-xl flex items-center justify-center text-sm font-medium transition-all cursor-pointer
-                          ${isSelected ? 'bg-secondary text-white shadow-md shadow-secondary/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
-                          ${hasRoute && !isSelected ? 'border-2 border-red-500/50' : ''}
+                        disabled={isPast}
+                        className={`relative h-12 rounded-xl flex items-center justify-center text-sm font-medium transition-all
+                          ${isPast ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'cursor-pointer'}
+                          ${isSelected && !isPast ? 'bg-secondary text-white shadow-md shadow-secondary/30' : ''}
+                          ${!isPast && !isSelected ? 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' : ''}
+                          ${routeOnDay && !isSelected && !isPast ? 'border-2 border-primary/50' : ''}
                         `}
                       >
                         {day}
-                        {hasRoute && !isSelected && (
-                          <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50 animate-pulse"></span>
+                        {routeOnDay && !isSelected && !isPast && (
+                          <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-primary shadow-sm animate-pulse"></span>
                         )}
                       </button>
                     );
@@ -274,23 +310,31 @@ const PopularDestinations = () => {
                 </div>
               </div>
 
-              {/* Sağ: Seçili Gün Detayı veya Dümenden Rota */}
+              {/* Sağ: Seçili Gün Detayı */}
               <div className="w-full md:w-1/3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 flex flex-col justify-center">
-                {dummyRoute ? (
+                {selectedRoute ? (
                   <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="w-12 h-12 bg-red-100 dark:bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
                       <span className="material-symbols-outlined">location_on</span>
                     </div>
-                    <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Atanmış Rota</h4>
-                    <img src={dummyRoute.image} alt={dummyRoute.title} className="w-full h-32 object-cover rounded-xl mb-4 shadow-sm" />
-                    <h5 className="font-bold text-lg text-primary mb-1">{dummyRoute.title}</h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{dummyRoute.desc}</p>
-                    <button 
-                      onClick={() => {
-                        setShowCalendar(false);
-                        navigate('/yeni-rota');
-                      }}
-                      className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-colors shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 cursor-pointer"
+                    <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-1">Atanmış Rota</h4>
+                    <p className="text-xs text-gray-400 mb-3">{selectedRoute.planned_date}</p>
+                    {/* Thumb */}
+                    <div className="w-full h-28 rounded-xl mb-3 overflow-hidden bg-gradient-to-br from-primary/20 to-sky-300/30 flex items-center justify-center">
+                      {selectedRoute.route_info?.selectedStops?.[0]?.image
+                        ? <img src={selectedRoute.route_info.selectedStops[0].image} alt="rota" className="w-full h-full object-cover" />
+                        : <span className="material-symbols-outlined text-4xl text-primary/40">map</span>
+                      }
+                    </div>
+                    <h5 className="font-bold text-base text-primary mb-1">{selectedRoute.title}</h5>
+                    {/* Durak özeti */}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      {selectedRoute.route_info?.selectedStops?.map(s => s.title).join(', ') || 'Durak bilgisi yok'}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mb-4">{(selectedRoute.route_info?.selectedStops?.length || 0)} durak · {selectedRoute.start_time || ''}</p>
+                    <button
+                      onClick={() => { setShowCalendar(false); navigate('/yeni-rota'); }}
+                      className="w-full py-3 bg-primary hover:bg-sky-600 text-white rounded-xl font-bold transition-colors shadow-lg shadow-primary/30 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       Rotayı Görüntüle
                       <span className="material-symbols-outlined text-sm">arrow_forward</span>
@@ -304,11 +348,8 @@ const PopularDestinations = () => {
                     <h4 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Tarih Seçildi</h4>
                     <p className="text-2xl font-black text-secondary mb-6">{selectedDate.split('-').reverse().join('.')}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Bu tarih için yeni bir gezi planı oluşturabilirsiniz.</p>
-                    <button 
-                      onClick={() => {
-                        setShowCalendar(false);
-                        navigate('/yeni-rota');
-                      }}
+                    <button
+                      onClick={() => { setShowCalendar(false); navigate(`/yeni-rota?date=${selectedDate}`); }}
                       className="w-full py-3 bg-secondary hover:bg-secondary/90 text-white rounded-xl font-bold transition-colors shadow-lg shadow-secondary/30 cursor-pointer"
                     >
                       Plan Oluştur
@@ -318,7 +359,7 @@ const PopularDestinations = () => {
                   <div className="text-center text-gray-500 dark:text-gray-400">
                     <span className="material-symbols-outlined text-5xl mb-4 opacity-50">touch_app</span>
                     <p>Detayları görmek veya yeni plan yapmak için takvimden bir gün seçin.</p>
-                    <p className="mt-4 text-xs opacity-70">Kırmızı işaretli günler atanmış rotaları gösterir.</p>
+                    <p className="mt-4 text-xs opacity-70">Mavi işaretli günler atanmış rotaları gösterir.</p>
                   </div>
                 )}
               </div>
@@ -326,6 +367,14 @@ const PopularDestinations = () => {
             
           </div>
         </div>
+      )}
+
+      {/* Destinasyon Modal */}
+      {selectedDestination && (
+        <DestinationModal
+          destination={selectedDestination}
+          onClose={() => setSelectedDestination(null)}
+        />
       )}
 
     </div>

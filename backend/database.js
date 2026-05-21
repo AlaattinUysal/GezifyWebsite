@@ -1,115 +1,53 @@
-// backend/database.js
-// sql.js tabanlı SQLite yönetimi — derleme gerektirmez (pure JS)
+const { createClient } = require('@supabase/supabase-js');
 
-const initSqlJs = require('sql.js');
-const fs = require('fs');
-const path = require('path');
+const SUPABASE_URL = 'https://mqronanpwluzofvxnmmr.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcm9uYW5wd2x1em9mdnhubW1yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTMwMDQzNCwiZXhwIjoyMDk0ODc2NDM0fQ.HGw48E_A3W347cPekUaxJyv1wEJeubeex8Ce2dj9YWg';
 
-const DB_PATH = path.join(__dirname, 'gezify.db');
+// Supabase istemcisini service role (admin) yetkisiyle oluşturuyoruz.
+// Böylece RLS kurallarını bypass ederek arka planda kullanıcı işlemlerini rahatça yapabiliriz.
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-let db = null;
-
-/**
- * Veritabanını başlatır. Dosya varsa yükler, yoksa yeni oluşturur.
- */
 async function initDatabase() {
-  const SQL = await initSqlJs();
+  console.log('✅ Supabase bağlantısı başlatıldı.');
+}
 
-  if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
-    console.log('✅ Mevcut veritabanı yüklendi:', DB_PATH);
-  } else {
-    db = new SQL.Database();
-    console.log('🆕 Yeni veritabanı oluşturuldu:', DB_PATH);
+async function findUserByEmail(email) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .single();
+    
+  if (error) return null;
+  return data;
+}
+
+async function createUser(name, email, passwordHash) {
+  const { data, error } = await supabase
+    .from('users')
+    .insert([
+      { name, email, password_hash: passwordHash }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('createUser hatası:', error);
+    return null;
   }
-
-  // Kullanıcılar tablosunu oluştur (zaten varsa dokunma)
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      google_id TEXT,
-      facebook_id TEXT,
-      avatar_url TEXT
-    )
-  `);
-
-  // Mevcut tablo varsa ve yeni kolonlar yoksa ekle (Migration)
-  try { db.run("ALTER TABLE users ADD COLUMN google_id TEXT;"); } catch (e) {}
-  try { db.run("ALTER TABLE users ADD COLUMN facebook_id TEXT;"); } catch (e) {}
-  try { db.run("ALTER TABLE users ADD COLUMN avatar_url TEXT;"); } catch (e) {}
-
-  saveDatabase();
-  console.log('✅ Kullanıcılar tablosu hazır.');
+  return data;
 }
 
-/**
- * Değişiklikleri diske yazar.
- */
-function saveDatabase() {
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(DB_PATH, buffer);
+async function getAllUsers() {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, name, email, created_at');
+    
+  if (error) return [];
+  return data;
 }
 
-/**
- * Email ile kullanıcı bul.
- */
-function findUserByEmail(email) {
-  const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
-  stmt.bind([email]);
-  if (stmt.step()) {
-    const row = stmt.getAsObject();
-    stmt.free();
-    return row;
-  }
-  stmt.free();
-  return null;
-}
-
-/**
- * Yeni kullanıcı oluştur.
- */
-function createUser(name, email, passwordHash) {
-  db.run(
-    'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
-    [name, email, passwordHash]
-  );
-  saveDatabase();
-
-  // Oluşturulan kullanıcıyı geri döndür
-  const stmt = db.prepare('SELECT id, name, email, created_at FROM users WHERE email = ?');
-  stmt.bind([email]);
-  if (stmt.step()) {
-    const row = stmt.getAsObject();
-    stmt.free();
-    return row;
-  }
-  stmt.free();
-  return null;
-}
-
-/**
- * Tüm kullanıcıları listele (debug amaçlı).
- */
-function getAllUsers() {
-  const stmt = db.prepare('SELECT id, name, email, created_at FROM users');
-  const users = [];
-  while (stmt.step()) {
-    users.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return users;
-}
-
-/**
- * OAuth ile kullanıcı bul veya oluştur.
- */
-function findOrCreateOAuthUser(provider, profile) {
+async function findOrCreateOAuthUser(provider, profile) {
   const email = profile.emails && profile.emails[0] ? profile.emails[0].value.toLowerCase() : null;
   const name = profile.displayName || 'Kullanıcı';
   const avatar_url = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
@@ -119,43 +57,52 @@ function findOrCreateOAuthUser(provider, profile) {
     throw new Error('OAuth provider did not return an email address.');
   }
 
-  // Önce bu email ile kayıtlı bir kullanıcı var mı bak
-  let user = findUserByEmail(email);
+  let user = await findUserByEmail(email);
 
   if (user) {
-    // Kullanıcı var, sadece sağlayıcı id'sini ve (opsiyonel) avatarı güncelle
-    let updateQuery = '';
-    let params = [];
-    if (provider === 'google') {
-      updateQuery = 'UPDATE users SET google_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?';
-      params = [providerId, avatar_url, user.id];
-    } else if (provider === 'facebook') {
-      updateQuery = 'UPDATE users SET facebook_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?';
-      params = [providerId, avatar_url, user.id];
-    }
-    
-    if (updateQuery) {
-      db.run(updateQuery, params);
-      saveDatabase();
-      user = findUserByEmail(email); // güncel hali
+    const updateData = {};
+    if (provider === 'google') updateData.google_id = providerId;
+    if (provider === 'facebook') updateData.facebook_id = providerId;
+    if (!user.avatar_url && avatar_url) updateData.avatar_url = avatar_url;
+
+    if (Object.keys(updateData).length > 0) {
+      const { data } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id)
+        .select()
+        .single();
+      if (data) user = data;
     }
     return user;
   }
 
-  // Kullanıcı yok, yeni oluştur
-  const query = `
-    INSERT INTO users (name, email, password_hash, ${provider === 'google' ? 'google_id' : 'facebook_id'}, avatar_url)
-    VALUES (?, ?, ?, ?, ?)
-  `;
-  db.run(query, [name, email, '', providerId, avatar_url]); // Şifresiz oluşturuyoruz
-  saveDatabase();
+  const insertData = {
+    name,
+    email,
+    password_hash: '', // OAuth üzerinden girenlerin şifresi boş olabilir
+    avatar_url
+  };
 
-  return findUserByEmail(email);
+  if (provider === 'google') insertData.google_id = providerId;
+  if (provider === 'facebook') insertData.facebook_id = providerId;
+
+  const { data, error } = await supabase
+    .from('users')
+    .insert([insertData])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('OAuth Create Error:', error);
+    throw error;
+  }
+
+  return data;
 }
 
 module.exports = {
   initDatabase,
-  saveDatabase,
   findUserByEmail,
   createUser,
   getAllUsers,

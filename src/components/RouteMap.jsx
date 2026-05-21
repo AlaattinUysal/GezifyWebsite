@@ -127,7 +127,7 @@ const RouteMap = ({ selectedStops, showRoute, searchQuery, onSearchChange, onRou
   const prevShowRouteRef = useRef(false);
 
   useEffect(() => {
-    if (showRoute && (!prevShowRouteRef.current || true) && selectedStops.length > 0) { // Her showRoute çağrısında yeniden hesaplasın ki saate göre değişsin
+    if (showRoute && selectedStops.length > 0) {
       let cancelled = false;
       const compute = async () => {
         setIsCalculating(true);
@@ -146,8 +146,7 @@ const RouteMap = ({ selectedStops, showRoute, searchQuery, onSearchChange, onRou
       return () => { cancelled = true; };
     }
     if (!showRoute) { setRouteSegments([]); setOrderedStopIds([]); }
-    prevShowRouteRef.current = showRoute;
-  }, [showRoute]);
+  }, [showRoute, startTime]);
 
   const getStopOrder = (stopId) => { const idx = orderedStopIds.indexOf(stopId); return idx >= 0 ? idx + 1 : null; };
   const allRoutePositions = routeSegments.flatMap(seg => seg.geometry);
